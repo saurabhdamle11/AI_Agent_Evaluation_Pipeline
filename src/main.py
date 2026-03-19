@@ -13,6 +13,7 @@ from src.data.database import close_db, connect_db
 from src.services.kafka_producer_service import KafkaProducerService
 from src.utils.exceptions import IngestionError
 from src.workers.conversation_worker import ConversationWorker
+from src.workers.evaluation_worker import EvaluationWorker
 from src.workers.feedback_worker import FeedbackWorker
 
 logging.basicConfig(
@@ -32,6 +33,7 @@ async def lifespan(app: FastAPI):
     worker_tasks = [
         asyncio.create_task(ConversationWorker().start()),
         asyncio.create_task(FeedbackWorker().start()),
+        asyncio.create_task(EvaluationWorker().start()),
     ]
     logger.info("Application startup complete")
 
