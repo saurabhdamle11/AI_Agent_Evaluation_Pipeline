@@ -3,7 +3,9 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from src.data.database import get_db
 from src.data.repositories.conversation_repository import ConversationRepository
+from src.data.repositories.evaluation_repository import EvaluationRepository
 from src.data.repositories.feedback_repository import FeedbackRepository
+from src.data.repositories.suggestion_repository import SuggestionRepository
 
 
 def get_conversation_repo(db: AsyncIOMotorDatabase = Depends(get_db)) -> ConversationRepository:
@@ -12,3 +14,11 @@ def get_conversation_repo(db: AsyncIOMotorDatabase = Depends(get_db)) -> Convers
 
 def get_feedback_repo(db: AsyncIOMotorDatabase = Depends(get_db)) -> FeedbackRepository:
     return FeedbackRepository(db)
+
+
+def get_evaluation_repo(db: AsyncIOMotorDatabase = Depends(get_db)) -> EvaluationRepository:
+    return EvaluationRepository(db)
+
+
+def get_suggestion_repo(db: AsyncIOMotorDatabase = Depends(get_db)) -> SuggestionRepository:
+    return SuggestionRepository(db)

@@ -7,8 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.config.settings import get_settings
+from src.controllers.evaluation_controller import router as evaluation_router
 from src.controllers.health_controller import router as health_router
 from src.controllers.ingestion_controller import router as ingestion_router
+from src.controllers.suggestion_controller import router as suggestion_router
 from src.data.database import close_db, connect_db
 from src.services.kafka_producer_service import KafkaProducerService
 from src.utils.exceptions import IngestionError
@@ -76,4 +78,14 @@ app.include_router(
     ingestion_router,
     prefix=f"{settings.api_v1_prefix}/ingest",
     tags=["Ingestion"],
+)
+app.include_router(
+    evaluation_router,
+    prefix=f"{settings.api_v1_prefix}/evaluations",
+    tags=["Evaluations"],
+)
+app.include_router(
+    suggestion_router,
+    prefix=f"{settings.api_v1_prefix}/suggestions",
+    tags=["Suggestions"],
 )

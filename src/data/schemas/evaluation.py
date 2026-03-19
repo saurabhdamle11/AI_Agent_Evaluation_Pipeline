@@ -48,6 +48,15 @@ class EvaluationResult(BaseModel):
     created_at: datetime
 
 
+class TriggerEvaluationRequest(BaseModel):
+    conversation_id: str
+
+
+class TriggerEvaluationResponse(BaseModel):
+    conversation_id: str
+    status: str
+
+
 # Internal type passed between evaluators and the orchestrator — not persisted directly
 class EvaluatorOutput(BaseModel):
     evaluator_name: str
