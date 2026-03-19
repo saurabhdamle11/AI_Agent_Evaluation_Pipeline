@@ -1,0 +1,40 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: eval-pipeline-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-evaladmin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-evalpass123}
+      MONGO_INITDB_DATABASE: eval_pipeline
+    volumes:
+      - mongo_data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/01-init.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # app service — uncomment once Dockerfile and src/ are ready
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: eval-pipeline-app
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     MONGO_URI: mongodb://${MONGO_USER:-evaladmin}:${MONGO_PASSWORD:-evalpass123}@mongodb:27017/eval_pipeline?authSource=admin
+  #     MONGO_DB_NAME: eval_pipeline
+  #     APP_ENV: development
+  #   depends_on:
+  #     mongodb:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./src:/app/src
+  #   restart: unless-stopped
+
+volumes:
+  mongo_data:
