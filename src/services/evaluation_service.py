@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from src.data.repositories.conversation_repository import ConversationRepository
 from src.data.repositories.evaluation_repository import EvaluationRepository
+from src.data.repositories.suggestion_repository import SuggestionRepository
 from src.data.schemas.evaluation import (
     CoherenceDetails,
     EvaluationResult,
@@ -37,9 +38,11 @@ class EvaluationService:
         self,
         conversation_repo: ConversationRepository,
         evaluation_repo: EvaluationRepository,
+        suggestion_repo: SuggestionRepository | None = None,
     ) -> None:
         self.conversation_repo = conversation_repo
         self.evaluation_repo = evaluation_repo
+        self.suggestion_repo = suggestion_repo
         self._evaluators = [
             HeuristicEvaluator(),
             ToolCallEvaluator(),
@@ -115,7 +118,21 @@ class EvaluationService:
             f"Evaluation complete — id={result.evaluation_id} "
             f"conversation={conversation_id} overall={scores.overall}"
         )
+
+        if self.suggestion_repo:
+            await self._generate_suggestions(result, conversation.get("agent_version", "unknown"))
+
         return result
+
+    async def _generate_suggestions(self, result: EvaluationResult, agent_version: str) -> None:
+        from src.services.suggestion_generator import SuggestionGenerator
+        candidates = SuggestionGenerator().generate(result, agent_version)
+        for doc in candidates:
+            fp = doc["_fingerprint"]
+            if await self.suggestion_repo.exists_by_fingerprint(fp, agent_version):
+                await self.suggestion_repo.append_conversation_id(fp, agent_version, result.conversation_id)
+            else:
+                await self.suggestion_repo.insert(doc)
 
     def _weighted_overall(self, scores: dict[str, float]) -> float:
         present = {k: v for k, v in _WEIGHTS.items() if k in scores}

@@ -41,6 +41,23 @@ class SuggestionRepository(BaseRepository):
         ).sort("created_at", -1)
         return await cursor.to_list(length=100)
 
+    async def insert(self, doc: dict) -> None:
+        await self.collection.insert_one(doc)
+
+    async def exists_by_fingerprint(self, fingerprint: str, agent_version: str) -> bool:
+        doc = await self.collection.find_one(
+            {"_fingerprint": fingerprint, "agent_version": agent_version, "status": "pending"},
+            {"_id": 1},
+        )
+        return doc is not None
+
+    async def append_conversation_id(self, fingerprint: str, agent_version: str, conversation_id: str) -> None:
+        """Link a new conversation to an existing pending suggestion with the same pattern."""
+        await self.collection.update_one(
+            {"_fingerprint": fingerprint, "agent_version": agent_version, "status": "pending"},
+            {"$addToSet": {"conversation_ids": conversation_id}},
+        )
+
     async def update_status(self, suggestion_id: str, status: str) -> dict | None:
         resolved_at = datetime.now(timezone.utc) if status in ("applied", "rejected", "expired") else None
         update: dict = {"$set": {"status": status}}

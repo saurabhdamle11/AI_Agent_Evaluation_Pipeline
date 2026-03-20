@@ -4,6 +4,7 @@ from src.config.settings import get_settings
 from src.data.database import get_db
 from src.data.repositories.conversation_repository import ConversationRepository
 from src.data.repositories.evaluation_repository import EvaluationRepository
+from src.data.repositories.suggestion_repository import SuggestionRepository
 from src.services.evaluation_service import EvaluationService
 from src.workers.base_worker import BaseWorker
 
@@ -25,6 +26,7 @@ class EvaluationWorker(BaseWorker):
         service = EvaluationService(
             conversation_repo=ConversationRepository(db),
             evaluation_repo=EvaluationRepository(db),
+            suggestion_repo=SuggestionRepository(db),
         )
         result = await service.evaluate(conversation_id)
         if result:
