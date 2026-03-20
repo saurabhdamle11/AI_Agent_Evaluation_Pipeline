@@ -19,7 +19,7 @@ st.set_page_config(
     layout="wide",
 )
 
-BASE_URL = "http://localhost:8000/api/v1"
+BASE_URL = "http://13.219.89.240:8000/api/v1"
 
 # -- Helpers -------------------------------------------------------------------
 
