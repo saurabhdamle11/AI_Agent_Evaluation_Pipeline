@@ -72,7 +72,7 @@ def score_label(score: float) -> str:
     return "Poor"
 
 
-SAMPLE_CONVERSATION_ID = "demo-conv-001"
+SAMPLE_CONVERSATION_ID = "swiggy-order-001"
 
 # -- Sidebar -------------------------------------------------------------------
 
@@ -118,12 +118,12 @@ if page == "Overview":
 
     st.markdown("### Try the Demo")
     st.markdown("""
-1. **Ingest Conversation** — submit a sample agent conversation
-2. **Ingest Feedback** — add a human rating and annotations for the same conversation
-3. **Evaluate** — trigger evaluation and view scores from all 4 evaluators
-4. **View Feedback** — see raw and aggregated feedback with kappa scores
-5. **Suggestions** — browse improvement suggestions generated from evaluation
-6. **Meta-Evaluation** — run the self-improvement loop across all data
+1. **Ingest Conversation** — submit a Swiggy food ordering conversation (user asks for biryani, agent searches restaurants, places order, confirms delivery)
+2. **Ingest Feedback** — add a human rating and annotations for the conversation
+3. **Evaluate** — trigger evaluation and view scores from all 4 evaluators (heuristic, tool accuracy, coherence, LLM judge)
+4. **View Feedback** — see raw and aggregated feedback with inter-annotator kappa scores
+5. **Suggestions** — browse improvement suggestions generated from the evaluation
+6. **Meta-Evaluation** — run the self-improvement loop comparing evaluator scores against human ground truth
 """)
 
     st.markdown("### Architecture")
@@ -163,21 +163,21 @@ elif page == "Ingest Conversation":
         turns = []
 
         with st.expander("Turn 1 — User", expanded=True):
-            t1_content = st.text_area("Content", value="Can you search for the latest AI research papers on evaluation frameworks?", key="t1")
+            t1_content = st.text_area("Content", value="I want to order chicken biryani from a good restaurant nearby. I am in Koramangala, Bangalore.", key="t1")
             turns.append({"turn_id": 1, "role": "user", "content": t1_content, "timestamp": "2026-03-20T10:00:00Z"})
 
         with st.expander("Turn 2 — Assistant (with tool call)", expanded=True):
-            t2_content = st.text_area("Content", value="Sure! Let me search for that.", key="t2")
+            t2_content = st.text_area("Content", value="Sure! Let me find the best chicken biryani restaurants near Koramangala for you.", key="t2")
             include_tool = st.checkbox("Include tool call", value=True)
             tool_result = None
             if include_tool:
-                tool_name = st.text_input("Tool Name", value="web_search")
-                tool_param = st.text_input("Query Parameter", value="AI agent evaluation frameworks 2025")
-                tool_result_text = st.text_input("Tool Result", value="Found 12 papers on LLM evaluation")
-                tool_latency = st.number_input("Tool Latency (ms)", min_value=0, value=450)
+                tool_name = st.text_input("Tool Name", value="search_restaurants")
+                tool_param = st.text_input("Query Parameter", value="chicken biryani near Koramangala Bangalore")
+                tool_result_text = st.text_input("Tool Result", value="Found 8 restaurants: Meghana Foods (4.5★), Behrouz Biryani (4.3★), Empire Restaurant (4.2★)")
+                tool_latency = st.number_input("Tool Latency (ms)", min_value=0, value=320)
                 tool_result = {
                     "tool_name": tool_name,
-                    "parameters": {"query": tool_param},
+                    "parameters": {"query": tool_param, "location": "Koramangala, Bangalore"},
                     "result": {"summary": tool_result_text},
                     "latency_ms": tool_latency,
                 }
@@ -187,8 +187,27 @@ elif page == "Ingest Conversation":
             turns.append(turn2)
 
         with st.expander("Turn 3 — Assistant response", expanded=True):
-            t3_content = st.text_area("Content", value="I found 12 recent papers. The most cited ones focus on LLM-as-judge evaluation, RAGAS frameworks, and multi-turn coherence benchmarks.", key="t3")
+            t3_content = st.text_area("Content", value="I found 8 restaurants near Koramangala serving chicken biryani. Top picks: Meghana Foods (4.5 stars, delivery in 35 min, Rs. 280), Behrouz Biryani (4.3 stars, delivery in 40 min, Rs. 349), and Empire Restaurant (4.2 stars, delivery in 30 min, Rs. 220). Would you like to place an order from any of these?", key="t3")
             turns.append({"turn_id": 3, "role": "assistant", "content": t3_content, "timestamp": "2026-03-20T10:00:02Z"})
+
+        with st.expander("Turn 4 — User", expanded=True):
+            t4_content = st.text_area("Content", value="Go ahead and order from Meghana Foods. Use my saved address and pay via UPI.", key="t4")
+            turns.append({"turn_id": 4, "role": "user", "content": t4_content, "timestamp": "2026-03-20T10:00:10Z"})
+
+        with st.expander("Turn 5 — Assistant (place order tool call)", expanded=True):
+            t5_content = st.text_area("Content", value="Placing your order from Meghana Foods now.", key="t5")
+            t5_tool = {
+                "tool_name": "place_order",
+                "parameters": {"restaurant": "Meghana Foods", "item": "Chicken Biryani", "payment": "UPI", "address": "saved_default"},
+                "result": {"order_id": "SWG-20240320-48291", "estimated_delivery": "35 minutes", "total": "Rs. 280"},
+                "latency_ms": 580,
+            }
+            turn5 = {"turn_id": 5, "role": "assistant", "content": t5_content, "timestamp": "2026-03-20T10:00:12Z", "tool_calls": [t5_tool]}
+            turns.append(turn5)
+
+        with st.expander("Turn 6 — Assistant confirmation", expanded=True):
+            t6_content = st.text_area("Content", value="Your order has been placed successfully! Order ID: SWG-20240320-48291. Chicken Biryani from Meghana Foods will be delivered in approximately 35 minutes. Total charged: Rs. 280 via UPI. You will receive live tracking updates on the Swiggy app.", key="t6")
+            turns.append({"turn_id": 6, "role": "assistant", "content": t6_content, "timestamp": "2026-03-20T10:00:13Z"})
 
         submitted = st.form_submit_button("Ingest Conversation", type="primary")
 
@@ -228,7 +247,7 @@ elif page == "Ingest Feedback":
         with col1:
             quality = st.selectbox("Quality", ["excellent", "good", "fair", "poor"], index=1)
         with col2:
-            notes = st.text_input("Notes", value="Responses were helpful and factually accurate")
+            notes = st.text_input("Notes", value="Agent correctly identified restaurants, placed order accurately, and confirmed with all details")
 
         st.markdown("#### Annotations")
         st.caption("Add typed labels from annotators. Multiple annotators for the same type will be used for kappa scoring.")
@@ -238,9 +257,9 @@ elif page == "Ingest Feedback":
             with st.expander(f"Annotation {i}", expanded=(i == 1)):
                 col_a, col_b, col_c, col_d, col_e = st.columns([2, 2, 2, 2, 1])
                 with col_a:
-                    ann_type = st.text_input("Type", value="tone" if i == 1 else ("accuracy" if i == 2 else "tone"), key=f"ann_type_{i}")
+                    ann_type = st.text_input("Type", value="task_completion" if i == 1 else ("tool_accuracy" if i == 2 else "task_completion"), key=f"ann_type_{i}")
                 with col_b:
-                    ann_label = st.text_input("Label", value="positive" if i <= 2 else "positive", key=f"ann_label_{i}")
+                    ann_label = st.text_input("Label", value="success" if i == 1 else ("correct" if i == 2 else "success"), key=f"ann_label_{i}")
                 with col_c:
                     ann_annotator = st.text_input("Annotator ID", value=f"annotator-{i}", key=f"ann_ann_{i}")
                 with col_d:
