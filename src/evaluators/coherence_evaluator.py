@@ -20,7 +20,7 @@ class CoherenceEvaluator(BaseEvaluator):
                 issues=[IssueSchema(
                     type="empty_conversation",
                     severity=IssueSeverity.critical,
-                    message="Conversation has no turns",
+                    description="Conversation has no turns",
                 )],
             )
 
@@ -33,7 +33,7 @@ class CoherenceEvaluator(BaseEvaluator):
                 issues.append(IssueSchema(
                     type="role_alternation_violation",
                     severity=IssueSeverity.warning,
-                    message=(
+                    description=(
                         f"Consecutive turns with same role '{non_system[i].get('role')}' "
                         f"at non-system positions {i - 1} and {i}"
                     ),
@@ -60,7 +60,7 @@ class CoherenceEvaluator(BaseEvaluator):
             issues.append(IssueSchema(
                 type="low_context_retention",
                 severity=IssueSeverity.warning,
-                message=f"Low context retention score: {context_retention:.2f}",
+                description=f"Low context retention score: {context_retention:.2f}",
             ))
 
         # contradiction_count: requires LLM — placeholder until LLM judge is integrated

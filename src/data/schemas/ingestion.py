@@ -22,7 +22,7 @@ class TurnSchema(BaseModel):
     role: Role
     content: str
     timestamp: str
-    tool_calls: Optional[list[ToolCallSchema]] = None
+    tool_calls: list[ToolCallSchema] = Field(default_factory=list)
 
 
 class ConversationMetadataSchema(BaseModel):

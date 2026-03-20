@@ -119,7 +119,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
                     IssueSchema(
                         type="llm_judge_unavailable",
                         severity=IssueSeverity.warning,
-                        message=f"LLM Judge could not complete evaluation: {exc}",
+                        description=f"LLM Judge could not complete evaluation: {exc}",
                     )
                 ],
             )
@@ -159,7 +159,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
             IssueSchema(
                 type=issue["type"],
                 severity=IssueSeverity(issue["severity"]),
-                message=issue["message"],
+                description=issue["message"],
             )
             for issue in data.get("issues") or []
         ]

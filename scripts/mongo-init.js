@@ -172,19 +172,22 @@ db.createCollection('meta_evaluations', {
   validator: {
     $jsonSchema: {
       bsonType: 'object',
-      required: ['evaluator_type', 'period_start', 'period_end', 'metrics'],
+      required: ['meta_evaluation_id', 'evaluator_metrics', 'blind_spots', 'calibration_adjustments', 'sample_size', 'created_at'],
       properties: {
-        evaluator_type: { enum: ['llm_judge', 'tool_evaluator', 'coherence', 'heuristic'] },
-        period_start: { bsonType: 'date' },
-        period_end: { bsonType: 'date' },
-        metrics: {
-          bsonType: 'object',
-          properties: {
-            precision: { bsonType: 'double' },
-            recall: { bsonType: 'double' },
-            f1_score: { bsonType: 'double' },
-            correlation_with_human: { bsonType: 'double' },
-            sample_size: { bsonType: 'int' }
+        meta_evaluation_id: { bsonType: 'string' },
+        evaluator_metrics: {
+          bsonType: 'array',
+          items: {
+            bsonType: 'object',
+            required: ['evaluator_type', 'precision', 'recall', 'f1_score', 'correlation_with_human', 'sample_size'],
+            properties: {
+              evaluator_type: { bsonType: 'string' },
+              precision: { bsonType: 'double' },
+              recall: { bsonType: 'double' },
+              f1_score: { bsonType: 'double' },
+              correlation_with_human: { bsonType: 'double' },
+              sample_size: { bsonType: 'int' }
+            }
           }
         },
         blind_spots: {
@@ -192,19 +195,24 @@ db.createCollection('meta_evaluations', {
           items: {
             bsonType: 'object',
             properties: {
-              category: { bsonType: 'string' },
-              description: { bsonType: 'string' },
-              missed_count: { bsonType: 'int' }
+              annotation_type: { bsonType: 'string' },
+              miss_rate: { bsonType: 'double' },
+              example_count: { bsonType: 'int' }
             }
           }
         },
         calibration_adjustments: {
-          bsonType: 'object',
-          properties: {
-            weight_modifier: { bsonType: 'double' },
-            threshold_changes: { bsonType: 'object' }
+          bsonType: 'array',
+          items: {
+            bsonType: 'object',
+            properties: {
+              evaluator_type: { bsonType: 'string' },
+              weight_multiplier: { bsonType: 'double' },
+              reason: { bsonType: 'string' }
+            }
           }
         },
+        sample_size: { bsonType: 'int' },
         created_at: { bsonType: 'date' }
       }
     }

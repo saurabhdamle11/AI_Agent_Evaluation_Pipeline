@@ -34,7 +34,7 @@ class ToolCallEvaluator(BaseEvaluator):
             issues.append(IssueSchema(
                 type="tool_execution_failure",
                 severity=IssueSeverity.warning,
-                message=f"{failed}/{len(all_tool_calls)} tool calls returned no result (possible failure)",
+                description=f"{failed}/{len(all_tool_calls)} tool calls returned no result (possible failure)",
             ))
 
         # parameter_accuracy: ratio of non-null parameter values
@@ -49,7 +49,7 @@ class ToolCallEvaluator(BaseEvaluator):
                     issues.append(IssueSchema(
                         type="null_parameter",
                         severity=IssueSeverity.warning,
-                        message=f"Tool '{tc.get('tool_name')}' has null value for param '{key}' — possible hallucination",
+                        description=f"Tool '{tc.get('tool_name')}' has null value for param '{key}' — possible hallucination",
                     ))
 
         parameter_accuracy = (total_params - null_params) / total_params if total_params > 0 else 1.0

@@ -72,7 +72,7 @@ class EvaluationService:
                 all_issues.append(IssueSchema(
                     type="evaluator_error",
                     severity=IssueSeverity.warning,
-                    message=str(output),
+                    description=str(output),
                 ))
                 continue
             merged_scores.update(output.scores)

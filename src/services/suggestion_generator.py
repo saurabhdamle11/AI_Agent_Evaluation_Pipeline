@@ -209,6 +209,5 @@ class SuggestionGenerator:
             "expected_impact": expected_impact,
             "status": "pending",
             "created_at": datetime.now(timezone.utc),
-            "resolved_at": None,
             "_fingerprint": fingerprint,
         }

@@ -25,9 +25,9 @@ class BaseWorker(ABC):
             auto_offset_reset="earliest",
             enable_auto_commit=True,
         )
-        await self._consumer.start()
-        logger.info(f"{self.__class__.__name__} consuming: {self.topics}")
         try:
+            await self._consumer.start()
+            logger.info(f"{self.__class__.__name__} consuming: {self.topics}")
             async for msg in self._consumer:
                 try:
                     await self.handle(msg.value)

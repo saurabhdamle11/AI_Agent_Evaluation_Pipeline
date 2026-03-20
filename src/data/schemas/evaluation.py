@@ -14,7 +14,7 @@ class IssueSeverity(str, Enum):
 class IssueSchema(BaseModel):
     type: str
     severity: IssueSeverity
-    message: str
+    description: str
 
 
 class ToolEvaluationDetails(BaseModel):

@@ -121,7 +121,7 @@ class TestEvaluationServiceEvaluate:
             ev.evaluate = AsyncMock(return_value=EvaluatorOutput(
                 evaluator_name=ev.__class__.__name__,
                 scores={"heuristic": 0.8},
-                issues=[IssueSchema(type=f"test_issue_{ev.__class__.__name__}", severity=IssueSeverity.info, message="x")],
+                issues=[IssueSchema(type=f"test_issue_{ev.__class__.__name__}", severity=IssueSeverity.info, description="x")],
             ))
         result = await service.evaluate("conv-001")
         issue_types = {i.type for i in result.issues_detected}

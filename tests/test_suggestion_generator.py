@@ -53,27 +53,27 @@ class TestFingerprintStability:
 
 class TestIssueBasedSuggestions:
     def test_known_issue_type_generates_suggestion(self):
-        result = make_result(issues=[IssueSchema(type="null_parameter", severity=IssueSeverity.warning, message="x")])
+        result = make_result(issues=[IssueSchema(type="null_parameter", severity=IssueSeverity.warning, description="x")])
         suggestions = generator.generate(result, AGENT)
         assert len(suggestions) == 1
         assert suggestions[0]["type"] == SuggestionType.tool.value
 
     def test_unknown_issue_type_is_skipped(self):
-        result = make_result(issues=[IssueSchema(type="unknown_issue_xyz", severity=IssueSeverity.info, message="x")])
+        result = make_result(issues=[IssueSchema(type="unknown_issue_xyz", severity=IssueSeverity.info, description="x")])
         suggestions = generator.generate(result, AGENT)
         assert suggestions == []
 
     def test_critical_severity_boosts_confidence(self):
-        warning_result = make_result(issues=[IssueSchema(type="null_parameter", severity=IssueSeverity.warning, message="x")])
-        critical_result = make_result(issues=[IssueSchema(type="null_parameter", severity=IssueSeverity.critical, message="x")])
+        warning_result = make_result(issues=[IssueSchema(type="null_parameter", severity=IssueSeverity.warning, description="x")])
+        critical_result = make_result(issues=[IssueSchema(type="null_parameter", severity=IssueSeverity.critical, description="x")])
         warning_conf = generator.generate(warning_result, AGENT)[0]["confidence"]
         critical_conf = generator.generate(critical_result, AGENT)[0]["confidence"]
         assert critical_conf > warning_conf
 
     def test_duplicate_issue_types_produce_single_suggestion(self):
         issues = [
-            IssueSchema(type="null_parameter", severity=IssueSeverity.warning, message="param A"),
-            IssueSchema(type="null_parameter", severity=IssueSeverity.warning, message="param B"),
+            IssueSchema(type="null_parameter", severity=IssueSeverity.warning, description="param A"),
+            IssueSchema(type="null_parameter", severity=IssueSeverity.warning, description="param B"),
         ]
         result = make_result(issues=issues)
         suggestions = generator.generate(result, AGENT)
@@ -81,21 +81,21 @@ class TestIssueBasedSuggestions:
 
     def test_multiple_distinct_issues_produce_multiple_suggestions(self):
         issues = [
-            IssueSchema(type="null_parameter", severity=IssueSeverity.warning, message="x"),
-            IssueSchema(type="tool_execution_failure", severity=IssueSeverity.warning, message="y"),
-            IssueSchema(type="high_latency", severity=IssueSeverity.warning, message="z"),
+            IssueSchema(type="null_parameter", severity=IssueSeverity.warning, description="x"),
+            IssueSchema(type="tool_execution_failure", severity=IssueSeverity.warning, description="y"),
+            IssueSchema(type="high_latency", severity=IssueSeverity.warning, description="z"),
         ]
         result = make_result(issues=issues)
         suggestions = generator.generate(result, AGENT)
         assert len(suggestions) == 3
 
     def test_tool_issue_produces_tool_type_suggestion(self):
-        result = make_result(issues=[IssueSchema(type="tool_execution_failure", severity=IssueSeverity.warning, message="x")])
+        result = make_result(issues=[IssueSchema(type="tool_execution_failure", severity=IssueSeverity.warning, description="x")])
         suggestions = generator.generate(result, AGENT)
         assert suggestions[0]["type"] == SuggestionType.tool.value
 
     def test_prompt_issue_produces_prompt_type_suggestion(self):
-        result = make_result(issues=[IssueSchema(type="high_latency", severity=IssueSeverity.warning, message="x")])
+        result = make_result(issues=[IssueSchema(type="high_latency", severity=IssueSeverity.warning, description="x")])
         suggestions = generator.generate(result, AGENT)
         assert suggestions[0]["type"] == SuggestionType.prompt.value
 
@@ -134,7 +134,7 @@ class TestScoreBasedSuggestions:
 
 class TestSuggestionShape:
     def test_required_fields_present(self):
-        result = make_result(issues=[IssueSchema(type="empty_content", severity=IssueSeverity.warning, message="x")])
+        result = make_result(issues=[IssueSchema(type="empty_content", severity=IssueSeverity.warning, description="x")])
         s = generator.generate(result, AGENT)[0]
         for field in ("suggestion_id", "type", "conversation_ids", "agent_version",
                       "suggestion", "rationale", "confidence", "expected_impact",
@@ -143,24 +143,24 @@ class TestSuggestionShape:
 
     def test_conversation_id_is_linked(self):
         result = make_result(
-            issues=[IssueSchema(type="empty_content", severity=IssueSeverity.warning, message="x")],
+            issues=[IssueSchema(type="empty_content", severity=IssueSeverity.warning, description="x")],
             conversation_id="conv-abc",
         )
         s = generator.generate(result, AGENT)[0]
         assert "conv-abc" in s["conversation_ids"]
 
     def test_agent_version_is_set(self):
-        result = make_result(issues=[IssueSchema(type="empty_content", severity=IssueSeverity.warning, message="x")])
+        result = make_result(issues=[IssueSchema(type="empty_content", severity=IssueSeverity.warning, description="x")])
         s = generator.generate(result, AGENT)[0]
         assert s["agent_version"] == AGENT
 
     def test_status_is_pending_by_default(self):
-        result = make_result(issues=[IssueSchema(type="empty_content", severity=IssueSeverity.warning, message="x")])
+        result = make_result(issues=[IssueSchema(type="empty_content", severity=IssueSeverity.warning, description="x")])
         s = generator.generate(result, AGENT)[0]
         assert s["status"] == "pending"
 
     def test_confidence_is_within_bounds(self):
-        issues = [IssueSchema(type=t, severity=IssueSeverity.critical, message="x")
+        issues = [IssueSchema(type=t, severity=IssueSeverity.critical, description="x")
                   for t in ("null_parameter", "empty_content", "tool_execution_failure")]
         result = make_result(issues=issues)
         for s in generator.generate(result, AGENT):

@@ -24,7 +24,7 @@ class HeuristicEvaluator(BaseEvaluator):
             issues.append(IssueSchema(
                 type="high_latency",
                 severity=IssueSeverity.warning,
-                message=f"Total latency {total_latency}ms exceeds {_TOTAL_LATENCY_WARNING_MS}ms threshold",
+                description=f"Total latency {total_latency}ms exceeds {_TOTAL_LATENCY_WARNING_MS}ms threshold",
             ))
             penalty += 0.1
 
@@ -37,7 +37,7 @@ class HeuristicEvaluator(BaseEvaluator):
                     issues.append(IssueSchema(
                         type="missing_field",
                         severity=IssueSeverity.critical,
-                        message=f"Turn {turn_id} missing required field: {field}",
+                        description=f"Turn {turn_id} missing required field: {field}",
                     ))
                     penalty += 0.15
 
@@ -46,7 +46,7 @@ class HeuristicEvaluator(BaseEvaluator):
                 issues.append(IssueSchema(
                     type="invalid_role",
                     severity=IssueSeverity.warning,
-                    message=f"Turn {turn_id} has invalid role: {turn.get('role')!r}",
+                    description=f"Turn {turn_id} has invalid role: {turn.get('role')!r}",
                 ))
                 penalty += 0.05
 
@@ -55,7 +55,7 @@ class HeuristicEvaluator(BaseEvaluator):
                 issues.append(IssueSchema(
                     type="empty_content",
                     severity=IssueSeverity.warning,
-                    message=f"Turn {turn_id} has empty content",
+                    description=f"Turn {turn_id} has empty content",
                 ))
                 penalty += 0.05
 
@@ -66,7 +66,7 @@ class HeuristicEvaluator(BaseEvaluator):
                     issues.append(IssueSchema(
                         type="tool_high_latency",
                         severity=IssueSeverity.warning,
-                        message=f"Tool '{tc.get('tool_name')}' latency {tc_latency}ms exceeds {_TOOL_LATENCY_WARNING_MS}ms",
+                        description=f"Tool '{tc.get('tool_name')}' latency {tc_latency}ms exceeds {_TOOL_LATENCY_WARNING_MS}ms",
                     ))
                     penalty += 0.05
 
