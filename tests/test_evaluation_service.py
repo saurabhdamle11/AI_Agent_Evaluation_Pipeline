@@ -116,9 +116,18 @@ class TestEvaluationServiceEvaluate:
     async def test_issues_from_all_evaluators_are_merged(self):
         conv_repo, eval_repo = make_repos(conversation=make_conversation())
         service = EvaluationService(conv_repo, eval_repo)
+        # Inject a sentinel issue into each evaluator so we can verify merging
+        for ev in service._evaluators:
+            ev.evaluate = AsyncMock(return_value=EvaluatorOutput(
+                evaluator_name=ev.__class__.__name__,
+                scores={"heuristic": 0.8},
+                issues=[IssueSchema(type=f"test_issue_{ev.__class__.__name__}", severity=IssueSeverity.info, message="x")],
+            ))
         result = await service.evaluate("conv-001")
-        # LLM judge stub always emits a stub_evaluator issue
-        assert any(i.type == "stub_evaluator" for i in result.issues_detected)
+        issue_types = {i.type for i in result.issues_detected}
+        # All four evaluators' sentinel issues must appear in the merged list
+        for ev_name in ("HeuristicEvaluator", "ToolCallEvaluator", "CoherenceEvaluator", "LLMJudgeEvaluator"):
+            assert f"test_issue_{ev_name}" in issue_types
 
     async def test_result_has_unique_evaluation_id(self):
         conv_repo, eval_repo = make_repos(conversation=make_conversation())

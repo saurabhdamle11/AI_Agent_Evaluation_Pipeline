@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.data.schemas.evaluation import IssueSeverity
 from src.evaluators.heuristic_evaluator import HeuristicEvaluator
@@ -297,27 +297,143 @@ class TestCoherenceEvaluator:
 # ---------------------------------------------------------------------------
 
 
+def _make_tool_block(input_data: dict) -> MagicMock:
+    """Build a mock tool_use content block matching the Anthropic SDK shape."""
+    block = MagicMock()
+    block.type = "tool_use"
+    block.input = input_data
+    return block
+
+
+def _make_api_response(tool_input: dict) -> MagicMock:
+    response = MagicMock()
+    response.content = [_make_tool_block(tool_input)]
+    return response
+
+
+def _default_tool_input(**overrides) -> dict:
+    base = {
+        "response_quality": 0.85,
+        "helpfulness": 0.9,
+        "factuality": 0.8,
+        "issues": [],
+    }
+    base.update(overrides)
+    return base
+
+
 class TestLLMJudgeEvaluator:
     @pytest.fixture
     def evaluator(self):
-        return LLMJudgeEvaluator()
+        with patch("src.evaluators.llm_judge_evaluator.anthropic.AsyncAnthropic"):
+            return LLMJudgeEvaluator()
 
-    async def test_returns_neutral_placeholder_score(self, evaluator):
-        conv = make_conversation(turns=[make_turn()])
-        output = await evaluator.evaluate(conv)
-        assert output.scores["response_quality"] == 0.5
+    def _patch_client(self, evaluator, tool_input: dict | None = None, exc: Exception | None = None):
+        mock_create = AsyncMock()
+        if exc:
+            mock_create.side_effect = exc
+        else:
+            mock_create.return_value = _make_api_response(tool_input or _default_tool_input())
+        evaluator._client.messages.create = mock_create
+        return mock_create
 
-    async def test_stub_issue_is_info_severity(self, evaluator):
-        conv = make_conversation(turns=[make_turn()])
-        output = await evaluator.evaluate(conv)
-        assert any(i.type == "stub_evaluator" and i.severity == IssueSeverity.info for i in output.issues)
-
-    async def test_details_contains_stub_flag(self, evaluator):
-        conv = make_conversation(turns=[make_turn()])
-        output = await evaluator.evaluate(conv)
-        assert output.details.get("stub") is True
+    # ── happy path ──────────────────────────────────────────────────────────
 
     async def test_evaluator_name(self, evaluator):
-        conv = make_conversation(turns=[make_turn()])
-        output = await evaluator.evaluate(conv)
+        self._patch_client(evaluator)
+        output = await evaluator.evaluate(make_conversation(turns=[make_turn()]))
         assert output.evaluator_name == "llm_judge"
+
+    async def test_response_quality_score_is_returned(self, evaluator):
+        self._patch_client(evaluator, _default_tool_input(response_quality=0.75))
+        output = await evaluator.evaluate(make_conversation(turns=[make_turn()]))
+        assert output.scores["response_quality"] == pytest.approx(0.75)
+
+    async def test_helpfulness_and_factuality_in_details(self, evaluator):
+        self._patch_client(evaluator, _default_tool_input(helpfulness=0.9, factuality=0.7))
+        output = await evaluator.evaluate(make_conversation(turns=[make_turn()]))
+        assert output.details["helpfulness"] == pytest.approx(0.9)
+        assert output.details["factuality"] == pytest.approx(0.7)
+
+    async def test_issues_from_judge_are_returned(self, evaluator):
+        tool_input = _default_tool_input(issues=[
+            {"type": "vague_response", "severity": "warning", "message": "Response was too vague."}
+        ])
+        self._patch_client(evaluator, tool_input)
+        output = await evaluator.evaluate(make_conversation(turns=[make_turn()]))
+        assert len(output.issues) == 1
+        assert output.issues[0].type == "vague_response"
+        assert output.issues[0].severity == IssueSeverity.warning
+
+    async def test_no_issues_returns_empty_list(self, evaluator):
+        self._patch_client(evaluator, _default_tool_input(issues=[]))
+        output = await evaluator.evaluate(make_conversation(turns=[make_turn()]))
+        assert output.issues == []
+
+    async def test_scores_are_clamped_to_valid_range(self, evaluator):
+        self._patch_client(evaluator, _default_tool_input(response_quality=1.5))
+        output = await evaluator.evaluate(make_conversation(turns=[make_turn()]))
+        assert output.scores["response_quality"] <= 1.0
+
+    async def test_calls_api_with_correct_model(self, evaluator):
+        from src.config.settings import get_settings
+        mock_create = self._patch_client(evaluator)
+        await evaluator.evaluate(make_conversation(turns=[make_turn()]))
+        assert mock_create.call_args.kwargs["model"] == get_settings().llm_judge_model
+
+    async def test_tool_choice_forces_tool_use(self, evaluator):
+        mock_create = self._patch_client(evaluator)
+        await evaluator.evaluate(make_conversation(turns=[make_turn()]))
+        assert mock_create.call_args.kwargs["tool_choice"] == {"type": "any"}
+
+    async def test_conversation_turns_included_in_prompt(self, evaluator):
+        mock_create = self._patch_client(evaluator)
+        conv = make_conversation(turns=[
+            make_turn(role="user", content="What is 2+2?"),
+            make_turn(role="assistant", content="It is 4."),
+        ])
+        await evaluator.evaluate(conv)
+        user_message = mock_create.call_args.kwargs["messages"][0]["content"]
+        assert "What is 2+2?" in user_message
+        assert "It is 4." in user_message
+
+    async def test_tool_calls_included_in_prompt(self, evaluator):
+        mock_create = self._patch_client(evaluator)
+        conv = make_conversation(turns=[
+            make_turn(
+                role="assistant",
+                tool_calls=[make_tool_call(tool_name="web_search", parameters={"query": "test"})],
+            )
+        ])
+        await evaluator.evaluate(conv)
+        user_message = mock_create.call_args.kwargs["messages"][0]["content"]
+        assert "web_search" in user_message
+
+    # ── graceful degradation ─────────────────────────────────────────────────
+
+    async def test_api_error_returns_neutral_score(self, evaluator):
+        self._patch_client(evaluator, exc=RuntimeError("connection refused"))
+        output = await evaluator.evaluate(make_conversation(turns=[make_turn()]))
+        assert output.scores["response_quality"] == pytest.approx(0.5)
+
+    async def test_api_error_adds_warning_issue(self, evaluator):
+        self._patch_client(evaluator, exc=RuntimeError("timeout"))
+        output = await evaluator.evaluate(make_conversation(turns=[make_turn()]))
+        assert any(
+            i.type == "llm_judge_unavailable" and i.severity == IssueSeverity.warning
+            for i in output.issues
+        )
+
+    async def test_missing_tool_block_raises_and_degrades(self, evaluator):
+        # Response with no tool_use block → ValueError → graceful fallback
+        response = MagicMock()
+        response.content = []  # no tool_use block
+        evaluator._client.messages.create = AsyncMock(return_value=response)
+        output = await evaluator.evaluate(make_conversation(turns=[make_turn()]))
+        assert output.scores["response_quality"] == pytest.approx(0.5)
+        assert any(i.type == "llm_judge_unavailable" for i in output.issues)
+
+    async def test_error_detail_stored_in_details(self, evaluator):
+        self._patch_client(evaluator, exc=RuntimeError("boom"))
+        output = await evaluator.evaluate(make_conversation(turns=[make_turn()]))
+        assert "boom" in output.details.get("error", "")

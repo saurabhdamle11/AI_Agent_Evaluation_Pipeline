@@ -26,3 +26,7 @@ class EvaluationRepository(BaseRepository):
             {"_id": 0},
         )
         return await cursor.to_list(length=100)
+
+    async def get_all(self, limit: int = 1000) -> list[dict]:
+        cursor = self.collection.find({}, {"_id": 0}).sort("created_at", -1)
+        return await cursor.to_list(length=limit)

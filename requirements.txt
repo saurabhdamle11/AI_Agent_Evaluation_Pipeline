@@ -13,6 +13,9 @@ pymongo==4.9.2
 # Kafka (async)
 aiokafka==0.11.0
 
+# LLM
+anthropic==0.49.0
+
 # Utilities
 python-dotenv==1.0.1
 

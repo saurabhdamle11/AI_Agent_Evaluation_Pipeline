@@ -8,8 +8,10 @@ from fastapi.responses import JSONResponse
 
 from src.config.settings import get_settings
 from src.controllers.evaluation_controller import router as evaluation_router
+from src.controllers.feedback_controller import router as feedback_router
 from src.controllers.health_controller import router as health_router
 from src.controllers.ingestion_controller import router as ingestion_router
+from src.controllers.meta_evaluation_controller import router as meta_evaluation_router
 from src.controllers.suggestion_controller import router as suggestion_router
 from src.data.database import close_db, connect_db
 from src.services.kafka_producer_service import KafkaProducerService
@@ -17,6 +19,7 @@ from src.utils.exceptions import IngestionError
 from src.workers.conversation_worker import ConversationWorker
 from src.workers.evaluation_worker import EvaluationWorker
 from src.workers.feedback_worker import FeedbackWorker
+from src.workers.processed_feedback_worker import ProcessedFeedbackWorker
 
 logging.basicConfig(
     level=logging.INFO,
@@ -35,6 +38,7 @@ async def lifespan(app: FastAPI):
     worker_tasks = [
         asyncio.create_task(ConversationWorker().start()),
         asyncio.create_task(FeedbackWorker().start()),
+        asyncio.create_task(ProcessedFeedbackWorker().start()),
         asyncio.create_task(EvaluationWorker().start()),
     ]
     logger.info("Application startup complete")
@@ -80,9 +84,19 @@ app.include_router(
     tags=["Ingestion"],
 )
 app.include_router(
+    feedback_router,
+    prefix=f"{settings.api_v1_prefix}/feedback",
+    tags=["Feedback"],
+)
+app.include_router(
     evaluation_router,
     prefix=f"{settings.api_v1_prefix}/evaluations",
     tags=["Evaluations"],
+)
+app.include_router(
+    meta_evaluation_router,
+    prefix=f"{settings.api_v1_prefix}/meta-evaluations",
+    tags=["Meta-Evaluations"],
 )
 app.include_router(
     suggestion_router,

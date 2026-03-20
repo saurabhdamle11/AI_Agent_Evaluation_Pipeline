@@ -28,3 +28,17 @@ class FeedbackRepository(BaseRepository):
             {"conversation_id": conversation_id},
             {"_id": 0},
         )
+
+    async def get_all_with_aggregated(self, limit: int = 1000) -> list[dict]:
+        cursor = self.collection.find(
+            {"aggregated": {"$exists": True}},
+            {"_id": 0},
+        )
+        return await cursor.to_list(length=limit)
+
+    async def update_aggregated(self, conversation_id: str, aggregated: dict) -> None:
+        now = datetime.now(timezone.utc)
+        await self.collection.update_one(
+            {"conversation_id": conversation_id},
+            {"$set": {"aggregated": aggregated, "updated_at": now}},
+        )
