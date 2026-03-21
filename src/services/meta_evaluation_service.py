@@ -81,8 +81,7 @@ def _human_score(feedback_doc: dict) -> float | None:
     if user_rating is not None:
         parts.append((float(user_rating) - 1) / 4.0)
 
-    aggregated = feedback_doc.get("aggregated") or {}
-    ops_review = aggregated.get("ops_review") or {}
+    ops_review = feedback_doc.get("ops_review") or {}
     quality = ops_review.get("quality") if isinstance(ops_review, dict) else None
     if quality and quality in _QUALITY_TO_SCORE:
         parts.append(_QUALITY_TO_SCORE[quality])

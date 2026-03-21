@@ -63,7 +63,6 @@ class CoherenceEvaluator(BaseEvaluator):
                 description=f"Low context retention score: {context_retention:.2f}",
             ))
 
-        # contradiction_count: requires LLM — placeholder until LLM judge is integrated
         contradiction_count = 0
 
         coherence_score = round((consistency_score + context_retention) / 2, 4)

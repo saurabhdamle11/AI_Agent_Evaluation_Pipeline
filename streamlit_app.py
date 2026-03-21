@@ -91,8 +91,8 @@ page = st.sidebar.radio(
     ],
 )
 st.sidebar.markdown("---")
-st.sidebar.caption("FastAPI backend: `http://localhost:8000`")
-st.sidebar.caption("[Swagger docs](http://localhost:8000/docs)")
+st.sidebar.caption("FastAPI backend: `http://13.219.89.240:8000`")
+st.sidebar.caption("[Swagger docs](http://13.219.89.240:8000/docs)")
 
 # -----------------------------------------------------------------------------
 # Page: Overview
