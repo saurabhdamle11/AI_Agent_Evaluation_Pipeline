@@ -72,7 +72,7 @@ Kafka Producer ──────────────► Kafka Topics
 ### 1. Clone and configure
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/saurabhdamle11/AI_Agent_Evaluation_Pipeline.git
 cd AI_Agent_Evaluation_Pipeline
 cp .env.example .env
 ```
